@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-serif: "Lora", "Playfair Display", Georgia, serif;
+  --font-sans: "DM Sans", "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+html,
+body {
+  background: #F8F7F5;
+  color: #2C2C2A;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-card border border-black/[0.06] shadow-card;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-[11px] font-medium;
+  }
+
+  .heading-serif {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .fab {
+    @apply fixed z-30 w-14 h-14 rounded-full bg-coral-400 text-white shadow-fab flex items-center justify-center hover:bg-coral-500 active:scale-95 transition;
+  }
+
+  .input-base {
+    @apply w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[14px] outline-none focus:border-neutral-400 transition;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-coral-400 hover:bg-coral-500 text-white px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 px-4 py-2 text-sm font-medium transition;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg text-neutral-700 hover:bg-neutral-100 px-3 py-2 text-sm font-medium transition;
+  }
+}
+
+/* Mobile-tuned scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Hide scrollbars on horizontal carousels but keep scroll */
+.scroll-x {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}

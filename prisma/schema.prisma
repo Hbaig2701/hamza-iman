@@ -1,0 +1,152 @@
+// Ours — couples memory capsule
+// Prisma schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Day {
+  id         String     @id @default(cuid())
+  date       DateTime   @unique @db.Date
+  coverImage String?
+  labels     Label[]    @relation("DayLabels")
+  entries    Entry[]
+  moods      Mood[]
+  milestone  Milestone?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model Entry {
+  id            String    @id @default(cuid())
+  dayId         String
+  day           Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  author        String
+  type          EntryType @default(TEXT)
+  textContent   String?
+  mediaUrls     String[]  @default([])
+  thumbnailUrls String[]  @default([])
+  voiceNoteUrl  String?
+  voiceDurationSec Int?
+  transcription String?
+  locationName  String?
+  locationLat   Float?
+  locationLng   Float?
+  isFavorite    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([dayId])
+  @@index([author])
+  @@index([isFavorite])
+}
+
+enum EntryType {
+  TEXT
+  PHOTO
+  VIDEO
+  VOICE_NOTE
+  SCREENSHOT
+  MIXED
+}
+
+model Label {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  color     String
+  isDefault Boolean @default(false)
+  days      Day[]   @relation("DayLabels")
+  createdAt DateTime @default(now())
+}
+
+model Mood {
+  id        String   @id @default(cuid())
+  dayId     String
+  day       Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  author    String
+  value     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([dayId, author])
+  @@index([author])
+}
+
+model Milestone {
+  id          String   @id @default(cuid())
+  dayId       String   @unique
+  day         Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  author      String
+  createdAt   DateTime @default(now())
+}
+
+model Quote {
+  id         String   @id @default(cuid())
+  text       String
+  saidBy     String
+  addedBy    String
+  date       DateTime @db.Date
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([saidBy])
+  @@index([date])
+}
+
+model BucketItem {
+  id             String    @id @default(cuid())
+  title          String
+  description    String?
+  addedBy        String
+  isCompleted    Boolean   @default(false)
+  completedAt    DateTime?
+  completedDayId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([isCompleted])
+}
+
+model Countdown {
+  id         String   @id @default(cuid())
+  title      String
+  emoji      String?
+  targetDate DateTime @db.Date
+  addedBy    String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([targetDate])
+}
+
+model Prompt {
+  id        String           @id @default(cuid())
+  question  String
+  category  String
+  isUsed    Boolean          @default(false)
+  usedOn    DateTime?        @db.Date
+  responses PromptResponse[]
+  createdAt DateTime         @default(now())
+
+  @@index([isUsed])
+}
+
+model PromptResponse {
+  id        String   @id @default(cuid())
+  promptId  String
+  prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  author    String
+  response  String
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([promptId, author, date])
+  @@index([date])
+}
