@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
-import { fromDateKey, toDateKey } from "@/lib/utils";
+import { fromDateKey, toDateKey, todayKey } from "@/lib/utils";
 
 function shift(dateKey: string, days: number): string {
   const d = fromDateKey(dateKey);
@@ -13,7 +13,7 @@ function shift(dateKey: string, days: number): string {
 
 export function DayNavigator({ date }: { date: string }) {
   const router = useRouter();
-  const today = toDateKey(new Date());
+  const today = todayKey();
   const prev = shift(date, -1);
   const next = shift(date, 1);
   const nextIsFuture = next > today;

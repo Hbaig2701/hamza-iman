@@ -7,7 +7,7 @@ import { EntryCard, type EntryDTO } from "@/components/ui/EntryCard";
 import { EntryComposer } from "@/components/composer/EntryComposer";
 import { Pill } from "@/components/ui/Pill";
 import { moodEmoji } from "@/components/ui/MoodSelector";
-import { authorDisplay, cn, readableDate, toDateKey } from "@/lib/utils";
+import { authorDisplay, cn, readableDate, todayKey } from "@/lib/utils";
 
 type Label = { id: string; name: string; color: string };
 type Mood = { author: string; value: number };
@@ -22,10 +22,11 @@ type DayDTO = {
   entries?: EntryDTO[];
 };
 
-export function DayView({ date, allowCompose = true }: { date: string; allowCompose?: boolean }) {
+export function DayView({ date }: { date: string }) {
   const router = useRouter();
-  const today = toDateKey(new Date());
+  const today = todayKey();
   const isToday = date === today;
+  const allowCompose = date <= today;
   const [data, setData] = useState<DayDTO | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
 

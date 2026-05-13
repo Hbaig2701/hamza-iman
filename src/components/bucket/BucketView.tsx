@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react";
-import { authorDisplay, cn, toDateKey } from "@/lib/utils";
+import { authorDisplay, cn, toDateKey, todayKey } from "@/lib/utils";
 
 type Item = {
   id: string;
@@ -72,7 +72,7 @@ export function BucketView() {
   const done = completed.length;
   const pctDone = total === 0 ? 0 : Math.round((done / total) * 100);
 
-  const today = new Date(toDateKey(new Date()) + "T00:00:00Z");
+  const today = new Date(todayKey() + "T00:00:00Z");
 
   return (
     <div className="space-y-4">
@@ -309,7 +309,7 @@ function AddCountdownModal({
 }) {
   const [title, setTitle] = useState("");
   const [emoji, setEmoji] = useState("");
-  const [targetDate, setTargetDate] = useState(toDateKey(new Date()));
+  const [targetDate, setTargetDate] = useState(todayKey());
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {

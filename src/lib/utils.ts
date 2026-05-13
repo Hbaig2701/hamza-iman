@@ -6,10 +6,26 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function toDateKey(d: Date | string): string {
+  // Used for round-tripping stored Date values (which are UTC midnight from
+  // Prisma's @db.Date) back into YYYY-MM-DD form. Must use UTC components so
+  // a stored "2026-05-12" reads back as "2026-05-12".
   const date = typeof d === "string" ? new Date(d) : d;
   const y = date.getUTCFullYear();
   const m = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * "Today" as the user sees it on their wall clock. Always uses local time,
+ * never UTC — so an entry posted at 11pm EDT lands on the same calendar day
+ * the user is experiencing, not the next UTC day.
+ */
+export function todayKey(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, Search, Star, Trash2, X, Loader2 } from "lucide-react";
 import { Pill } from "@/components/ui/Pill";
 import { useUser } from "@/components/UserContext";
-import { authorDisplay, cn, shortDate, toDateKey } from "@/lib/utils";
+import { authorDisplay, cn, shortDate, todayKey } from "@/lib/utils";
 
 type Quote = {
   id: string;
@@ -195,7 +195,7 @@ function AddQuoteModal({
 }) {
   const [text, setText] = useState("");
   const [saidBy, setSaidBy] = useState<"hamza" | "iman">("hamza");
-  const [date, setDate] = useState(toDateKey(new Date()));
+  const [date, setDate] = useState(todayKey());
   const [submitting, setSubmitting] = useState(false);
 
   if (!open) return null;

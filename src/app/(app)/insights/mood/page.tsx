@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { daysInMonth, toDateKey } from "@/lib/utils";
+import { daysInMonth, todayKey } from "@/lib/utils";
 import { moodEmoji } from "@/components/ui/MoodSelector";
 
 export default function MoodHistoryPage() {
@@ -28,7 +28,7 @@ export default function MoodHistoryPage() {
   }, [year, month]);
 
   const total = daysInMonth(year, month);
-  const todayKey = toDateKey(new Date());
+  const todayK = todayKey();
 
   return (
     <div className="space-y-4">
@@ -98,7 +98,7 @@ export default function MoodHistoryPage() {
               <span className="absolute top-0.5 left-0.5 text-[9px] font-medium text-neutral-700">
                 {d}
               </span>
-              {k === todayKey && (
+              {k === todayK && (
                 <span className="absolute inset-0 ring-2 ring-coral-300 rounded-lg pointer-events-none" />
               )}
             </div>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Diamond, LayoutGrid, Grid3X3 } from "lucide-react";
 import { Pill } from "@/components/ui/Pill";
-import { cn, daysInMonth, toDateKey } from "@/lib/utils";
+import { cn, daysInMonth, toDateKey, todayKey } from "@/lib/utils";
 
 type Label = { id: string; name: string; color: string };
 type DayDTO = {
@@ -146,15 +146,15 @@ function MonthGrid({
   filter: "all" | "milestones";
 }) {
   const total = daysInMonth(year, month);
-  const todayKey = toDateKey(new Date());
+  const todayK = todayKey();
   return (
     <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-7 gap-2">
       {Array.from({ length: total }).map((_, i) => {
         const d = i + 1;
         const key = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const day = days[key];
-        const isFuture = key > todayKey;
-        const isToday = key === todayKey;
+        const isFuture = key > todayK;
+        const isToday = key === todayK;
         const milestone = day?.milestone;
         const primaryLabel = day?.labels?.[0];
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalendarHeart } from "lucide-react";
-import { toDateKey } from "@/lib/utils";
+import { toDateKey, todayKey } from "@/lib/utils";
 
 type Countdown = {
   id: string;
@@ -23,7 +23,7 @@ export function CountdownCards() {
 
   if (items.length === 0) return null;
 
-  const today = toDateKey(new Date());
+  const today = todayKey();
   const todayDate = new Date(today + "T00:00:00Z");
 
   return (
