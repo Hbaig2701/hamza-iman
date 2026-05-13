@@ -35,6 +35,10 @@ export async function GET(req: NextRequest) {
         (firstMedia
           ? firstMedia.thumbnailUrls[0] || firstMedia.mediaUrls[0]
           : null);
+      const mediaCount = d.entries.reduce(
+        (sum, e) => sum + (e.mediaUrls?.length || 0),
+        0
+      );
       return {
         id: d.id,
         date: d.date,
@@ -42,6 +46,7 @@ export async function GET(req: NextRequest) {
         labels: d.labels,
         milestone: d.milestone,
         entryCount: d._count.entries,
+        mediaCount,
       };
     }),
   });

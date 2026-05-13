@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { todayKey } from "@/lib/utils";
 import { DayView } from "@/components/day/DayView";
+import { DayNavigator } from "@/components/day/DayNavigator";
 import { FlashbackCard } from "@/components/today/FlashbackCard";
 import { PromptCard } from "@/components/today/PromptCard";
 import { CountdownCards } from "@/components/today/CountdownCards";
@@ -21,6 +22,7 @@ export default function TodayPage() {
 
   return (
     <div className="space-y-4">
+      <DayNavigator date={today} />
       <FlashbackCard />
       <CountdownCards />
       <PromptCard />

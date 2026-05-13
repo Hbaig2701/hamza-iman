@@ -14,7 +14,20 @@ type DayDTO = {
   labels: Label[];
   milestone: { id: string; title: string } | null;
   entryCount: number;
+  mediaCount: number;
 };
+
+/**
+ * Green tint that scales with the day's "activity" (entries + media items).
+ * The first piece of content makes the day clearly green; more piles on
+ * stronger until it caps. Returns a Tailwind-RGB color string.
+ */
+function activityGreen(activity: number): string {
+  if (activity <= 0) return "transparent";
+  // Tailwind teal-500 base: #1D9E75 → 29, 158, 117
+  const alpha = Math.min(0.78, 0.22 + activity * 0.07);
+  return `rgba(29, 158, 117, ${alpha})`;
+}
 
 export function CalendarView({
   initialYear,
@@ -126,7 +139,21 @@ export function CalendarView({
       </div>
 
       {mode === "month" ? (
-        <MonthGrid year={year} month={month} days={days} filter={filter} />
+        <>
+          <MonthGrid year={year} month={month} days={days} filter={filter} />
+          <div className="flex items-center justify-end gap-1.5 text-[10px] text-neutral-500 pt-1">
+            <span>less</span>
+            {[1, 3, 6, 10].map((n) => (
+              <span
+                key={n}
+                className="w-4 h-4 rounded-sm"
+                style={{ backgroundColor: activityGreen(n) }}
+                title={`~${n} item${n > 1 ? "s" : ""}`}
+              />
+            ))}
+            <span>more</span>
+          </div>
+        </>
       ) : (
         <YearGrid year={year} onPickMonth={(m) => { setMonth(m); setMode("month"); }} />
       )}
@@ -170,6 +197,14 @@ function MonthGrid({
           );
         }
 
+        const activity = day ? day.entryCount + (day.mediaCount || 0) : 0;
+        const hasActivity = activity > 0;
+        const greenBg = activityGreen(activity);
+        // Once the green is dark enough, switch foreground text to white for legibility.
+        const greenIsDark = hasActivity && activity >= 4;
+        const numberColor =
+          day?.coverImage || greenIsDark ? "text-white" : "text-neutral-700";
+
         return (
           <Link
             key={key}
@@ -184,10 +219,16 @@ function MonthGrid({
             style={
               day?.coverImage
                 ? {
-                    backgroundImage: `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.4)), url(${day.coverImage})`,
+                    // Cover image as the visual; tint it with green so activity still reads at a glance.
+                    backgroundImage: hasActivity
+                      ? `linear-gradient(${greenBg}, ${greenBg}), url(${day.coverImage})`
+                      : `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.4)), url(${day.coverImage})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
+                    backgroundBlendMode: hasActivity ? "multiply" : undefined,
                   }
+                : hasActivity
+                ? { backgroundColor: greenBg }
                 : primaryLabel?.color
                 ? { backgroundColor: hexA(primaryLabel.color, 0.15) }
                 : undefined
@@ -196,7 +237,7 @@ function MonthGrid({
             <div
               className={cn(
                 "absolute top-1.5 left-1.5 text-[11px] font-semibold",
-                day?.coverImage ? "text-white" : "text-neutral-700"
+                numberColor
               )}
             >
               {d}
@@ -206,22 +247,33 @@ function MonthGrid({
                 <Diamond className="w-2.5 h-2.5 text-white" />
               </div>
             )}
+            {hasActivity && !milestone && (
+              <div
+                className={cn(
+                  "absolute top-1 right-1.5 text-[10px] font-semibold tabular-nums",
+                  greenIsDark || day?.coverImage ? "text-white/90" : "text-teal-800"
+                )}
+              >
+                {activity}
+              </div>
+            )}
             {primaryLabel && (
               <div className="absolute bottom-1 left-1 right-1 flex">
                 <span
                   className="pill"
                   style={{
-                    backgroundColor: hexA(primaryLabel.color, day?.coverImage ? 0.9 : 0.18),
-                    color: day?.coverImage ? "white" : darken(primaryLabel.color),
+                    backgroundColor: hexA(
+                      primaryLabel.color,
+                      day?.coverImage || greenIsDark ? 0.9 : 0.18
+                    ),
+                    color:
+                      day?.coverImage || greenIsDark
+                        ? "white"
+                        : darken(primaryLabel.color),
                   }}
                 >
                   {primaryLabel.name}
                 </span>
-              </div>
-            )}
-            {!day?.coverImage && !primaryLabel && day && (
-              <div className="absolute inset-0 flex items-center justify-center text-[10px] text-neutral-400">
-                {day.entryCount} {day.entryCount === 1 ? "entry" : "entries"}
               </div>
             )}
           </Link>
