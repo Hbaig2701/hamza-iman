@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Diamond, Heart } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, Diamond, Heart, CalendarDays } from "lucide-react";
 import { EntryCard, type EntryDTO } from "@/components/ui/EntryCard";
 import { EntryComposer } from "@/components/composer/EntryComposer";
 import { Pill } from "@/components/ui/Pill";
 import { moodEmoji } from "@/components/ui/MoodSelector";
-import { authorDisplay, cn, readableDate } from "@/lib/utils";
+import { authorDisplay, cn, readableDate, toDateKey } from "@/lib/utils";
 
 type Label = { id: string; name: string; color: string };
 type Mood = { author: string; value: number };
@@ -22,6 +23,9 @@ type DayDTO = {
 };
 
 export function DayView({ date, allowCompose = true }: { date: string; allowCompose?: boolean }) {
+  const router = useRouter();
+  const today = toDateKey(new Date());
+  const isToday = date === today;
   const [data, setData] = useState<DayDTO | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
 
@@ -54,8 +58,27 @@ export function DayView({ date, allowCompose = true }: { date: string; allowComp
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <div className="text-[11px] uppercase tracking-wide text-neutral-500">
-          {date === new Date().toISOString().slice(0, 10) ? "Today" : "Journal"}
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] uppercase tracking-wide text-neutral-500">
+            {isToday ? "Today" : "Journal"}
+          </div>
+          {isToday && (
+            <label className="inline-flex items-center gap-1 text-[11px] text-neutral-500 hover:text-neutral-800 cursor-pointer relative">
+              <CalendarDays className="w-3.5 h-3.5" />
+              edit a past day
+              <input
+                type="date"
+                max={today}
+                onChange={(e) => {
+                  if (e.target.value && e.target.value !== today) {
+                    router.push(`/day/${e.target.value}`);
+                  }
+                }}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                aria-label="Jump to past day"
+              />
+            </label>
+          )}
         </div>
         <h1 className="heading-serif text-2xl text-neutral-800">{readableDate(date)}</h1>
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
