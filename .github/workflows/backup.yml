@@ -1,0 +1,63 @@
+name: Daily backup
+
+on:
+  schedule:
+    # Runs every day at 06:00 UTC (≈ 1am EST / 11pm PST)
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Pull latest export from production
+        env:
+          BACKUP_URL: ${{ secrets.BACKUP_URL }}
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_URL:-}" ] || [ -z "${BACKUP_TOKEN:-}" ]; then
+            echo "::error::BACKUP_URL or BACKUP_TOKEN secret is missing"
+            exit 1
+          fi
+          mkdir -p backups
+          DATE=$(date -u +"%Y-%m-%d")
+          TMP=$(mktemp)
+          HTTP=$(curl -sS -o "$TMP" -w "%{http_code}" \
+            -H "Authorization: Bearer $BACKUP_TOKEN" \
+            "$BACKUP_URL/api/export")
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Export endpoint returned HTTP $HTTP"
+            head -c 500 "$TMP"
+            exit 1
+          fi
+          # Pretty-print so git diffs are readable
+          python3 -m json.tool "$TMP" > backups/latest.json
+          cp backups/latest.json "backups/$DATE.json"
+          BYTES=$(wc -c < backups/latest.json)
+          echo "Backup: $BYTES bytes → backups/latest.json + backups/$DATE.json"
+
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          git config user.name  "ours-backup-bot"
+          git config user.email "backup-bot@users.noreply.github.com"
+          if git diff --quiet backups/; then
+            echo "No changes since last backup."
+          else
+            git add backups/
+            git commit -m "backup: $(date -u +%Y-%m-%d)"
+            git push
+            echo "Backup committed."
+          fi

@@ -1,9 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Allow either an authenticated browser session OR a backup token in the Authorization header.
+  const auth = req.headers.get("authorization") || "";
+  const tokenMatch = auth.match(/^Bearer\s+(.+)$/i);
+  const backupToken = process.env.BACKUP_TOKEN;
+  const tokenOk =
+    backupToken && tokenMatch && tokenMatch[1] === backupToken;
+  if (!tokenOk) {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
   const [days, labels, quotes, bucket, countdowns, milestones, prompts] = await Promise.all([
     prisma.day.findMany({
       include: { entries: true, moods: true, milestone: true, labels: true },
