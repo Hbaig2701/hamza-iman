@@ -38,12 +38,28 @@ model Entry {
   locationLat   Float?
   locationLng   Float?
   isFavorite    Boolean   @default(false)
+  comments      Comment[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   @@index([dayId])
   @@index([author])
   @@index([isFavorite])
+}
+
+model Comment {
+  id            String   @id @default(cuid())
+  entryId       String
+  entry         Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  author        String
+  textContent   String?
+  mediaUrls     String[] @default([])
+  thumbnailUrls String[] @default([])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([entryId])
+  @@index([author])
 }
 
 enum EntryType {

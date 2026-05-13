@@ -22,7 +22,10 @@ export async function GET(req: NextRequest) {
 
   const entries = await prisma.entry.findMany({
     where,
-    include: { day: { select: { date: true, id: true } } },
+    include: {
+      day: { select: { date: true, id: true } },
+      comments: { orderBy: { createdAt: "asc" } },
+    },
     orderBy: { createdAt: "desc" },
     take: 200,
   });

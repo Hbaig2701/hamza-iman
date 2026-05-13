@@ -1,10 +1,21 @@
 "use client";
 
-import { Star, MapPin, Trash2, Pencil, Check, X, Loader2 } from "lucide-react";
+import {
+  Star,
+  MapPin,
+  Trash2,
+  Pencil,
+  Check,
+  X,
+  Loader2,
+  MessageCircle,
+} from "lucide-react";
 import { useState } from "react";
 import { cn, authorDisplay, authorColor, formatTime } from "@/lib/utils";
 import { MediaGrid } from "./MediaGrid";
 import { VoicePlayer } from "./VoicePlayer";
+import { CommentItem, type CommentDTO } from "./CommentItem";
+import { CommentComposer } from "./CommentComposer";
 import { useUser } from "@/components/UserContext";
 
 export type EntryDTO = {
@@ -20,6 +31,7 @@ export type EntryDTO = {
   locationName: string | null;
   isFavorite: boolean;
   createdAt: string | Date;
+  comments?: CommentDTO[];
 };
 
 export function EntryCard({
@@ -32,12 +44,14 @@ export function EntryCard({
   const me = useUser();
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
   const [draftText, setDraftText] = useState(entry.textContent || "");
   const [draftTranscription, setDraftTranscription] = useState(
     entry.transcription || ""
   );
   const color = authorColor(entry.author);
   const isMine = entry.author === me;
+  const comments = entry.comments || [];
 
   const toggleFavorite = async () => {
     setBusy(true);
@@ -89,6 +103,19 @@ export function EntryCard({
       setEditing(false);
     }
     setBusy(false);
+  };
+
+  const onCommentAdded = (c: CommentDTO) => {
+    onChange?.({ ...entry, comments: [...comments, c] });
+    setReplyOpen(false);
+  };
+
+  const onCommentChanged = (id: string, next: CommentDTO | null) => {
+    const updated =
+      next === null
+        ? comments.filter((c) => c.id !== id)
+        : comments.map((c) => (c.id === id ? next : c));
+    onChange?.({ ...entry, comments: updated });
   };
 
   return (
@@ -218,6 +245,39 @@ export function EntryCard({
         <p className="text-[12px] italic text-neutral-600 border-l-2 border-coral-200 pl-2">
           {entry.transcription}
         </p>
+      )}
+
+      {(comments.length > 0 || replyOpen) && (
+        <div className="pt-1.5 pl-3 ml-1 border-l-2 border-neutral-200 space-y-1.5">
+          {comments.map((c) => (
+            <CommentItem
+              key={c.id}
+              comment={c}
+              onChange={(next) => onCommentChanged(c.id, next)}
+            />
+          ))}
+          {replyOpen && (
+            <CommentComposer
+              entryId={entry.id}
+              onPosted={onCommentAdded}
+              onCancel={() => setReplyOpen(false)}
+            />
+          )}
+        </div>
+      )}
+
+      {!editing && !replyOpen && (
+        <div className="pt-0.5">
+          <button
+            onClick={() => setReplyOpen(true)}
+            className="inline-flex items-center gap-1 text-[11px] text-neutral-500 hover:text-neutral-800 transition"
+          >
+            <MessageCircle className="w-3 h-3" />
+            {comments.length === 0
+              ? "reply"
+              : `reply (${comments.length})`}
+          </button>
+        </div>
       )}
     </article>
   );

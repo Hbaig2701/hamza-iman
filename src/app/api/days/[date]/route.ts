@@ -14,7 +14,10 @@ export async function GET(_req: NextRequest, { params }: { params: { date: strin
       labels: true,
       milestone: true,
       moods: true,
-      entries: { orderBy: { createdAt: "asc" } },
+      entries: {
+        orderBy: { createdAt: "asc" },
+        include: { comments: { orderBy: { createdAt: "asc" } } },
+      },
     },
   });
 
