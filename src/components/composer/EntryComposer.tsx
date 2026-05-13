@@ -45,6 +45,10 @@ export function EntryComposer({
   const [milestone, setMilestone] = useState<{ title: string; description?: string } | null>(null);
   const [milestoneTitle, setMilestoneTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const photoInput = useRef<HTMLInputElement>(null);
@@ -127,23 +131,102 @@ export function EntryComposer({
     setSubmitting(true);
     setError(null);
     try {
-      const fd = new FormData();
-      fd.append("date", date);
-      if (text.trim()) fd.append("textContent", text.trim());
-      if (transcription.trim()) fd.append("transcription", transcription.trim());
-      for (const p of photos) fd.append("photos", p, p.name);
-      for (const v of videos) fd.append("videos", v, v.name);
-      for (const s of screenshots) fd.append("screenshots", s, s.name);
-      if (voiceBlob) {
-        fd.append("voiceNote", voiceBlob.blob, "voice.webm");
-        fd.append("voiceDurationSec", String(voiceBlob.sec));
+      // 1) Build manifest of files to upload directly to Supabase (bypasses Vercel's 4.5 MB limit)
+      type Slot = { kind: "photo" | "video" | "screenshot" | "voice"; blob: Blob; name: string; type: string };
+      const slots: Slot[] = [];
+      for (const p of photos) slots.push({ kind: "photo", blob: p, name: p.name, type: p.type });
+      for (const s of screenshots) slots.push({ kind: "screenshot", blob: s, name: s.name, type: s.type });
+      for (const v of videos) slots.push({ kind: "video", blob: v, name: v.name, type: v.type });
+      if (voiceBlob) slots.push({ kind: "voice", blob: voiceBlob.blob, name: "voice.webm", type: "audio/webm" });
+
+      const photoUrls: string[] = [];
+      const screenshotUrls: string[] = [];
+      const videoUrls: string[] = [];
+      let voiceNoteUrl: string | null = null;
+
+      if (slots.length > 0) {
+        setUploadProgress({ done: 0, total: slots.length });
+        const signRes = await fetch("/api/uploads/sign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date,
+            files: slots.map((s) => ({
+              kind: s.kind,
+              name: s.name,
+              type: s.type,
+              size: s.blob.size,
+            })),
+          }),
+        });
+        if (!signRes.ok) {
+          const d = await signRes.json().catch(() => ({}));
+          throw new Error(d.error || "Could not prepare upload");
+        }
+        const { uploads } = (await signRes.json()) as {
+          uploads: Array<{
+            kind: string;
+            signedUrl: string;
+            publicUrl: string;
+            contentType: string;
+          }>;
+        };
+        for (let i = 0; i < slots.length; i++) {
+          const slot = slots[i];
+          const target = uploads[i];
+          const put = await fetch(target.signedUrl, {
+            method: "PUT",
+            body: slot.blob,
+            headers: { "Content-Type": slot.type || "application/octet-stream" },
+          });
+          if (!put.ok) {
+            const msg = await put.text().catch(() => "");
+            throw new Error(
+              `Upload failed (${put.status})${msg ? ": " + msg.slice(0, 120) : ""}`
+            );
+          }
+          if (slot.kind === "photo") photoUrls.push(target.publicUrl);
+          else if (slot.kind === "screenshot") screenshotUrls.push(target.publicUrl);
+          else if (slot.kind === "video") videoUrls.push(target.publicUrl);
+          else if (slot.kind === "voice") voiceNoteUrl = target.publicUrl;
+          setUploadProgress({ done: i + 1, total: slots.length });
+        }
       }
-      if (location) {
-        fd.append("locationName", location.name);
-        fd.append("locationLat", String(location.lat));
-        fd.append("locationLng", String(location.lng));
-      }
-      const res = await fetch("/api/entries", { method: "POST", body: fd });
+
+      // 2) Create the entry row with just the URLs (tiny JSON payload, well under Vercel limits)
+      const mediaUrls = [...photoUrls, ...screenshotUrls, ...videoUrls];
+      const inferredType =
+        voiceNoteUrl && !text.trim() && !transcription.trim()
+          ? "VOICE_NOTE"
+          : voiceNoteUrl
+          ? "MIXED"
+          : videoUrls.length > 0
+          ? "VIDEO"
+          : screenshotUrls.length > 0 && photoUrls.length === 0
+          ? "SCREENSHOT"
+          : photoUrls.length > 0 && text.trim()
+          ? "MIXED"
+          : photoUrls.length > 0
+          ? "PHOTO"
+          : "TEXT";
+
+      const res = await fetch("/api/entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date,
+          type: inferredType,
+          textContent: text.trim() || null,
+          transcription: transcription.trim() || null,
+          mediaUrls,
+          thumbnailUrls: mediaUrls, // no transform pipeline yet
+          voiceNoteUrl,
+          voiceDurationSec: voiceBlob?.sec ?? null,
+          locationName: location?.name ?? null,
+          locationLat: location?.lat ?? null,
+          locationLng: location?.lng ?? null,
+        }),
+      });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to post");
@@ -179,6 +262,7 @@ export function EntryComposer({
       setError(e?.message || "Something went wrong");
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -401,17 +485,30 @@ export function EntryComposer({
           )}
         </div>
 
-        <footer className="sticky bottom-0 bg-neutral-50 border-t border-black/[0.06] px-4 py-3 flex items-center justify-between">
-          <button onClick={onClose} className="btn-ghost">
+        <footer className="sticky bottom-0 bg-neutral-50 border-t border-black/[0.06] px-4 py-3 flex items-center justify-between gap-2">
+          <button onClick={onClose} className="btn-ghost" disabled={submitting}>
             Cancel
           </button>
+          {uploadProgress && uploadProgress.total > 0 && (
+            <div className="flex-1 text-[12px] text-neutral-600">
+              Uploading {uploadProgress.done} / {uploadProgress.total}…
+              <div className="h-1 bg-neutral-200 rounded-full overflow-hidden mt-1">
+                <div
+                  className="h-full bg-coral-400 transition-all"
+                  style={{
+                    width: `${(uploadProgress.done / uploadProgress.total) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
           <button onClick={submit} disabled={submitting} className="btn-primary">
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Send className="w-4 h-4" />
             )}
-            Post
+            {uploadProgress ? "Uploading…" : "Post"}
           </button>
         </footer>
       </div>
